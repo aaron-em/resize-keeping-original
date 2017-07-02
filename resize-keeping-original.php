@@ -46,9 +46,6 @@ class ResizeKeepingOriginal {
 
         $upload_dir = dirname($image_data['file']);
         
-        self::debug('Upload directory currently contains:');
-        self::debug(`ls '$upload_dir'`);
-
         /* So we get called before Wordpress's own resize logic, so we
          * can pretty much just do the one resize and call that the
          * original, and rename the real original so we can prevent
@@ -59,14 +56,14 @@ class ResizeKeepingOriginal {
 
         $image_editor = wp_get_image_editor($image_data['file']);
 
-        # Early exit if this isn't a media type we want to handle
+        # Early exit if this isn't a media type we want to handle.
         if (! in_array($image_data['type'],
                        ['image/png', 'image/gif', 'image/jpg', 'image/jpeg'])) {
             self::debug('Not a media type we handle.');
             return $image_data;
         };
 
-        # Early exit if we couldn't get an image editor
+        # Early exit if we couldn't get an image editor.
         if (!$image_editor || is_wp_error($image_editor)) {
             self::debug('Whoops, couldn\'t get image editor.');
             self::debug(print_r($image_editor, true));
@@ -77,7 +74,7 @@ class ResizeKeepingOriginal {
         self::debug('Image dimensions: ' . print_r($orig_sizes, true));
 
         // If the real original has no dimension greater than
-        // max_dimension, we needn't mess with it.
+        // max_dimension, we needn't mess with it further.
         if (! ((isset($orig_sizes['width'])
                 && $orig_sizes['width'] > $max_dimension)
                or (isset($orig_sizes['height'])
@@ -112,8 +109,7 @@ class ResizeKeepingOriginal {
             self::debug('Failed to copy file! ( ._.) Bombing out...');
             throw new Exception('Aborting bogus upload');
         };
-        self::debug("Copied image. Contents of upload dir now:");
-        self::debug(`ls '$upload_dir'`);
+        self::debug("Copied image successfully.");
 
         // We then resize the uploaded file to match the dimensions
         // computed earlier.
