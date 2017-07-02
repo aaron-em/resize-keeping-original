@@ -28,10 +28,6 @@ class ResizeKeepingOriginal {
             };
         };
 
-        // Empty log
-        $fh = fopen('/tmp/rko-debug.log', 'w');
-        fclose($fh);
-
         // Install resize hook
         add_action('wp_handle_upload', array('ResizeKeepingOriginal', 'handle_upload'));
     }
@@ -41,7 +37,7 @@ class ResizeKeepingOriginal {
         if (!$should_debug) return;
         
         $fh = fopen('/tmp/rko-debug.log', 'a');
-        fwrite($fh, "$message\n");
+        fwrite($fh, strftime("%F %T") . " $message\n");
         fclose($fh);
     }
 
@@ -67,13 +63,13 @@ class ResizeKeepingOriginal {
         # Early exit if this isn't a media type we want to handle
         if (! in_array($image_data['type'],
                        ['image/png', 'image/gif', 'image/jpg', 'image/jpeg'])) {
-            self::debug('Not a media type we handle: ');
+            self::debug('Not a media type we handle.');
             return $image_data;
         };
 
         # Early exit if we couldn't get an image editor
         if (!$orig_image_editor || is_wp_error($orig_image_editor)) {
-            self::debug('Whoops, couldn\'t get image editor');
+            self::debug('Whoops, couldn\'t get image editor.');
             self::debug(print_r($orig_image_editor, true));
             return $image_data;
         };
@@ -87,7 +83,7 @@ class ResizeKeepingOriginal {
                 && $orig_sizes['width'] > $max_dimension)
                or (isset($orig_sizes['height'])
                    && $orig_sizes['height'] > $max_dimension))) {
-            self::debug('Image is too small to need resizing. Done!');
+            self::debug('Image is too small to need resizing.');
             return $image_data;
         };
 
@@ -100,15 +96,55 @@ class ResizeKeepingOriginal {
                                           $orig_sizes['width'],
                                           $orig_sizes['height']);
 
-        
+        // We copy the real original file to a new name with the
+        // computed dimensions included.
+
+        // Then we resize the copy to match those dimensions.
+
+        // Then we rename the real original to include "-original-"
+        // and its own dimensions. This gives us something we can
+        // unambiguously use to identify and block HTTP access to the
+        // file at the server level. (NB your regex needs to be sane,
+        // otherwise you'll block files you don't mean to if they have
+        // "-original" or something in their names)
+
+        // Finally, we modify the image_data array to reference the
+        // resized copy we created, so that Wordpress will see that,
+        // not the true original at full resolution, as the "real"
+        // file. (TODO make sure we don't need to do this ourselves in
+        // the db - or just resize the unrenamed file and copy/rename
+        // differently)
         
         return $image_data;
     }
 
+    public static function is_integral($n) {
+        return ($n === floor($n));
+    }
+
     public static function compute_resize($max, $width, $height) {
+        $new_width = 0;
+        $new_height = 0;
+        $dimension = ($width > $height ? $width : $height);
+        $factor = 0;
+        $tries = 0;
+        self::debug("Computing resize from {$width}x{$height} to max $max");
+
+        do {
+            ++$tries;
+            $factor = $max / $dimension;
+            $new_width = $width * $factor;
+            $new_height = $height * $factor;
+            self::debug("Try $tries: max $max, factor $factor, new dimensions {$new_width}x{$new_height}");
+            ++$max;
+        } while (! (self::is_integral($new_width)
+                    && self::is_integral($new_height)));
+
+        self::debug("Sticking with {$new_width}x{$new_height}");
+        
         return [
-            'width' => $width,
-            'height' => $height
+            'width' => $new_width,
+            'height' => $new_height
         ];
     }
 };
