@@ -46,6 +46,10 @@ class ResizeKeepingOriginal {
     public static function handle_upload($image_data) {
         self::debug('Handler called!');
         self::debug(print_r($image_data, true));
+
+        $upload_dir = dirname($image_data['file']);
+        self::debug(`ls '$upload_dir'`);
+        
         return $image_data;
     }
 };
