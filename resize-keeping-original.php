@@ -87,33 +87,45 @@ class ResizeKeepingOriginal {
             return $image_data;
         };
 
-        // We compute a new size within the bounds of max_dimension,
-        // and which preserves the aspect ratio of the original
-        // image. If we can't do that and end up with integral
-        // dimensions, we add as many pixels to max_dimension as are
-        // required for us to do so.
+        // We compute a new size, bounded approximately by
+        // max_dimension - see compute_resize for details.
         $new_sizes = self::compute_resize($max_dimension,
                                           $orig_sizes['width'],
                                           $orig_sizes['height']);
 
-        // We copy the real original file to a new name with the
-        // computed dimensions included.
+        // We copy the original file to a new name, including the
+        // string '-ORIGINAL-' followed by its true dimensions. This
+        // gives us something to key off in our Apache configuration
+        // rule protecting these files from HTTP access.
+        
+        // We rely on Wordpress's upload handling to give us a unique
+        // filename from which to start. No overwrite checking is
+        // performed.
+        $fileinfo = pathinfo($image_data['file']);
+        $new_filename = $fileinfo['filename']
+                      . '-' . 'ORIGINAL'
+                      . '-' . $orig_sizes['width']
+                      . 'x' . $orig_sizes['height']
+                      . '.' . $fileinfo['extension'];
+        $new_pathname = $fileinfo['dirname'] . '/' . $new_filename;
+        self::debug("Will copy original to $new_pathname");
+        if (true || !copy($image_data['file'], $new_pathname)) {
+            self::debug('Failed to copy file! ( ._.) Bombing out...');
+            throw new Exception('Aborting bogus upload');
+        };
 
-        // Then we resize the copy to match those dimensions.
+        // We then resize the uploaded file to match the dimensions
+        // computed earlier.
 
-        // Then we rename the real original to include "-original-"
-        // and its own dimensions. This gives us something we can
-        // unambiguously use to identify and block HTTP access to the
-        // file at the server level. (NB your regex needs to be sane,
-        // otherwise you'll block files you don't mean to if they have
-        // "-original" or something in their names)
+        // Finally, we return the image_data array and let Wordpress
+        // create further resizes from that.
 
-        // Finally, we modify the image_data array to reference the
-        // resized copy we created, so that Wordpress will see that,
-        // not the true original at full resolution, as the "real"
-        // file. (TODO make sure we don't need to do this ourselves in
-        // the db - or just resize the unrenamed file and copy/rename
-        // differently)
+        // Note that this will potentially cause quality problems, in
+        // that those are double-resized. We'll evaluate that once it
+        // happens; it may be desirable to avoid releasing images of
+        // excessively high quality. If it's unsatisfactory, we'll
+        // handle all of the resizes ourself.
+
         
         return $image_data;
     }
