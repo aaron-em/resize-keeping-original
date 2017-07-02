@@ -63,6 +63,21 @@ class ResizeKeepingOriginal {
         $max_dimension = get_option('rko_max_dimension');
 
         $orig_image_editor = wp_get_image_editor($image_data['file']);
+
+        # Early exit if this isn't a media type we want to handle
+        if (! in_array($image_data['type'],
+                       ['image/png', 'image/gif', 'image/jpg', 'image/jpeg'])) {
+            self::debug('Not a media type we handle: ');
+            return $image_data;
+        };
+
+        # Early exit if we couldn't get an image editor
+        if (!$orig_image_editor || is_wp_error($orig_image_editor)) {
+            self::debug('Whoops, couldn\'t get image editor');
+            self::debug(print_r($orig_image_editor, true));
+            return $image_data;
+        };
+        
         $orig_sizes = $orig_image_editor->get_size();
         self::debug('Image dimensions: ' . print_r($orig_sizes, true));
 
