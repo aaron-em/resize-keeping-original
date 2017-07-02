@@ -9,7 +9,6 @@ Author URI: https://example.com/lol
 
 it's a thing lol
 */
-
 class ResizeKeepingOriginal {
     // NB these are all prefixed with 'rko_' when they're added to
     // Wordpress
@@ -58,7 +57,7 @@ class ResizeKeepingOriginal {
 
         $max_dimension = get_option('rko_max_dimension');
 
-        $orig_image_editor = wp_get_image_editor($image_data['file']);
+        $image_editor = wp_get_image_editor($image_data['file']);
 
         # Early exit if this isn't a media type we want to handle
         if (! in_array($image_data['type'],
@@ -68,13 +67,13 @@ class ResizeKeepingOriginal {
         };
 
         # Early exit if we couldn't get an image editor
-        if (!$orig_image_editor || is_wp_error($orig_image_editor)) {
+        if (!$image_editor || is_wp_error($image_editor)) {
             self::debug('Whoops, couldn\'t get image editor.');
-            self::debug(print_r($orig_image_editor, true));
+            self::debug(print_r($image_editor, true));
             return $image_data;
         };
         
-        $orig_sizes = $orig_image_editor->get_size();
+        $orig_sizes = $image_editor->get_size();
         self::debug('Image dimensions: ' . print_r($orig_sizes, true));
 
         // If the real original has no dimension greater than
@@ -113,9 +112,20 @@ class ResizeKeepingOriginal {
             self::debug('Failed to copy file! ( ._.) Bombing out...');
             throw new Exception('Aborting bogus upload');
         };
+        self::debug("Copied image. Contents of upload dir now:");
+        self::debug(`ls '$upload_dir'`);
 
         // We then resize the uploaded file to match the dimensions
         // computed earlier.
+        $image_editor->resize($new_sizes['width'], $new_sizes['height'], false);
+        self::debug('Resized image');
+
+        // If we're going to mess with the quality, here's where we would do it.
+
+        // Then we save the image.
+        $saved_image_data = $image_editor->save($image_data['file']);
+        self::debug('Saved image data:');
+        self::debug(print_r($saved_image_data, true));
 
         // Finally, we return the image_data array and let Wordpress
         // create further resizes from that.
@@ -126,7 +136,6 @@ class ResizeKeepingOriginal {
         // excessively high quality. If it's unsatisfactory, we'll
         // handle all of the resizes ourself.
 
-        
         return $image_data;
     }
 
