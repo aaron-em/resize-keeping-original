@@ -73,6 +73,43 @@ class ResizeKeepingOriginal {
         $orig_sizes = $image_editor->get_size();
         self::debug('Image dimensions: ' . print_r($orig_sizes, true));
 
+        // Let's take a look at the image metadata.
+        $image_meta = wp_read_image_metadata($image_data['file']);
+        self::debug('Image metadata: ' . print_r($image_meta, true));
+
+        // We'll examine the orientation and convert it to a rotation
+        // factor in degrees. (There are also values representing
+        // reflections, but we won't care about those because we
+        // should never see them.)
+        // Note that the rotation is counter-clockwise, so the factors
+        // are set accordingly.
+        $rotation_factors = [
+            1 => 0,
+            3 => 180,
+            6 => 270,
+            8 => 90
+        ];
+        $rotation_factor = $rotation_factors[$image_meta['orientation']];
+        self::debug("EXIF orientation is {$image_meta['orientation']};"
+                    . " rotation factor is $rotation_factor");
+
+        // If the image requires rotation, we perform it. Then we save
+        // the image and recreate the image editor on it, to make sure
+        // our further modifications use its new state.
+        // This updates the EXIF for free! ^_____^
+        if ($rotation_factor > 0) {
+            $image_editor->rotate($rotation_factor);
+            $image_editor->save($image_data['file']);
+            $image_editor = wp_get_image_editor($image_data['file']);
+
+            // Also refetch the image metadata we have handles on, to
+            // ensure we're seeing correct state.
+            $orig_sizes = $image_editor->get_size();
+            $image_meta = wp_read_image_metadata($image_data['file']);
+            self::debug('Image dimensions after rotation: ' . print_r($orig_sizes, true));
+            self::debug('Image metadata after rotation: ' . print_r($image_meta, true));
+        };
+
         // If the real original has no dimension greater than
         // max_dimension, we needn't mess with it further.
         if (! ((isset($orig_sizes['width'])
