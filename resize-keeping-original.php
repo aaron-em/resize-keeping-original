@@ -109,7 +109,7 @@ class ResizeKeepingOriginal {
                       . '.' . $fileinfo['extension'];
         $new_pathname = $fileinfo['dirname'] . '/' . $new_filename;
         self::debug("Will copy original to $new_pathname");
-        if (true || !copy($image_data['file'], $new_pathname)) {
+        if (!copy($image_data['file'], $new_pathname)) {
             self::debug('Failed to copy file! ( ._.) Bombing out...');
             throw new Exception('Aborting bogus upload');
         };
