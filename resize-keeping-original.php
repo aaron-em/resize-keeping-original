@@ -10,21 +10,44 @@ Author URI: https://example.com/lol
 it's a thing lol
 */
 
+class ResizeKeepingOriginal {
+    public static $OPTION_DEFAULTS = [
+        'version' => '0.0.1',
+        'max_dimension' => 2048,
+        'debug' => true
+    ];
 
-$PLUGIN_VERSION = '0.0.1';
-$OPTION_DEFAULTS = [
-    'version' => $PLUGIN_VERSION,
-    'max_dimension' => 2048
-];
+    public static function initialize() {
+        # Install options, if they aren't already there (or if we're in debug mode)
+        if (self::$OPTION_DEFAULTS['debug'] ||
+            get_option('rko_version') !== self::$OPTION_DEFAULTS['version']) {
+            foreach (self::$OPTION_DEFAULTS as $key => $value) {
+                add_option('rko_' . $key, $value);
+            };
+        };
 
-if (get_option('rko_resize_version') !== $PLUGIN_VERSION) {
-    foreach ($OPTION_DEFAULTS as $key => $value) {
-        add_option('rko_' . $key, $value);
-    };
+        # Empty log
+        $fh = fopen('/tmp/rko-debug.log', 'w');
+        fclose($fh);
+
+        # Install resize hook
+        add_action('wp_handle_upload', array('ResizeKeepingOriginal', 'handle_upload'));
+    }
+
+    private static function debug($message) {
+        $should_debug = get_option('rko_debug') || true;
+        if (!$should_debug) return;
+        
+        $fh = fopen('/tmp/rko-debug.log', 'a');
+        fwrite($fh, "$message\n");
+        fclose($fh);
+    }
+
+    public static function handle_upload($image_data) {
+        self::debug('Handler called!');
+        self::debug(print_r($image_data, true));
+        return $image_data;
+    }
 };
 
-add_action('wp_handle_upload', 'rko_upload_resize');
-
-function rko_upload_resize($image_data) {
-    return $image_data;
-};
+ResizeKeepingOriginal::initialize();
