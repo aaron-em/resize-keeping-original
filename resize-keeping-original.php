@@ -1,21 +1,23 @@
 <?php
 /*
 Plugin Name: Resize Keeping Original
-Plugin URI: https://example.com/lol
-Description: lol front matter to come
+Plugin URI: https://aaron-m.com/2017/07/05/resize-keeping-original-plugin
+Description: Resize uploaded images exceeding a configurable bound so that they fit within it, and bake EXIF orientation into images so that they don't rely on the client to display the right way up.
 Author: Aaron Miller <me@aaron-miller.me>
-Version: 0.0.1
-Author URI: https://example.com/lol
+Version: 1.0.0
+Author URI: https://aaron-m.com/
 
-it's a thing lol
+Resize uploaded images exceeding a configurable bound so that they fit
+within it, and bake EXIF orientation into images so that they don't
+rely on the client to display the right way up.
 */
 class ResizeKeepingOriginal {
     // NB these are all prefixed with 'rko_' when they're added to
     // Wordpress
     public static $OPTION_DEFAULTS = [
-        'version' => '0.0.1',
+        'version' => '1.0.0',
         'max_dimension' => 2048,
-        'debug' => true
+        'debug' => false
     ];
 
     public static function initialize() {
@@ -23,7 +25,10 @@ class ResizeKeepingOriginal {
         if (self::$OPTION_DEFAULTS['debug']
             or (get_option('rko_version') !== self::$OPTION_DEFAULTS['version'])) {
             foreach (self::$OPTION_DEFAULTS as $key => $value) {
-                add_option('rko_' . $key, $value);
+                $current_value = get_option('rko_' . $key);
+                if (null !== $current_value) {
+                    add_option('rko_' . $key, $value);
+                };
             };
         };
 
